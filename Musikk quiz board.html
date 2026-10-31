@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Musikk Quiz - Board</title>
+<style>
+  :root {
+    --bg-a: #050b26;
+    --bg-b: #0f2a7a;
+    --tile: linear-gradient(180deg, #1b40a8, #142f7d);
+    --tile-edge: #4f7bf0;
+    --gold: #f7c948;
+    --ink: #ffffff;
+    --soft: #b9c6ea;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    padding: 18px 22px 22px;
+    background: radial-gradient(circle at 50% 0%, #17347f 0%, var(--bg-a) 70%);
+    color: var(--ink);
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(1.2rem, 2.4vw, 2rem);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
+  }
+
+  .ghost-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .ghost-btn:hover { background: rgba(255, 255, 255, 0.16); }
+
+  .scoreboard {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 14px;
+  }
+
+  .team {
+    min-width: 150px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: rgba(9, 20, 60, 0.85);
+    border: 1px solid #3f63c9;
+    text-align: center;
+    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .team.pulse {
+    transform: translateY(-4px);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(247, 201, 72, 0.35);
+  }
+
+  /* The team whose turn it is. */
+  .team.up {
+    border-color: var(--gold);
+    background: rgba(247, 201, 72, 0.18);
+    box-shadow: 0 0 18px rgba(247, 201, 72, 0.55), 0 0 0 2px var(--gold);
+  }
+
+  .team.up .team-name { color: var(--gold); font-weight: 700; }
+  .team.up .team-name::before { content: '\25B6\00a0'; }
+
+  .team-name {
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .team-score {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  .board-wrap { flex: 1; min-height: 0; }
+
+  .board {
+    height: 100%;
+    display: grid;
+    gap: 8px;
+    grid-template-rows: auto repeat(var(--rows), minmax(0, 1fr));
+  }
+
+  .cat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 10px 6px;
+    background: linear-gradient(180deg, #10256b, #0b1c52);
+    border: 1px solid var(--tile-edge);
+    border-radius: 8px;
+    font-size: clamp(0.7rem, 1.25vw, 1.15rem);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid var(--tile-edge);
+    background: var(--tile);
+    font-size: clamp(1.4rem, 4vw, 3.4rem);
+    font-weight: 800;
+    color: var(--gold);
+    text-shadow: 0 3px 0 rgba(0, 0, 0, 0.5);
+    transition: background 0.3s ease, color 0.3s ease, opacity 0.3s ease, transform 0.2s ease;
+  }
+
+  .tile.empty {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: transparent;
+  }
+
+  .tile.wrong {
+    background: linear-gradient(180deg, var(--wrong-top, #b4413f), var(--wrong-bottom, #8c2b29));
+    border-color: rgba(255, 160, 160, 0.5);
+  }
+
+  .tile.done {
+    background: #070d22;
+    border-color: rgba(255, 255, 255, 0.09);
+    color: rgba(247, 201, 72, 0.14);
+  }
+
+  .tile.missed {
+    background: linear-gradient(180deg, #a52c27, #6b1a16);
+    border-color: rgba(255, 150, 150, 0.4);
+    color: rgba(255, 216, 214, 0.45);
+  }
+
+  .tile.free {
+    background: linear-gradient(180deg, #1fa060, #10743f);
+    border-color: #6ce6a8;
+    color: #eafff3;
+  }
+
+  .tile.hidden-for-zoom { opacity: 0; }
+
+  .waiting {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 14px;
+    background: radial-gradient(circle at 50% 40%, #16327a, #050b26 70%);
+    z-index: 40;
+    text-align: center;
+    padding: 24px;
+  }
+
+  .waiting.show { display: flex; }
+
+  .waiting h2 {
+    margin: 0;
+    font-size: clamp(1.6rem, 5vw, 3.2rem);
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .waiting p { margin: 0; color: var(--soft); font-size: 1.05rem; }
+
+  .waiting button {
+    font: inherit;
+    font-size: 1rem;
+    padding: 12px 22px;
+    border-radius: 10px;
+    border: none;
+    background: var(--gold);
+    color: #1a1400;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .waiting button.hide { display: none; }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: none;
+    background: rgba(3, 7, 24, 0);
+    transition: background 0.35s ease;
+  }
+
+  .overlay.active { display: block; }
+  .overlay.lit { background: rgba(3, 7, 24, 0.82); }
+
+  .clue-box {
+    position: fixed;
+    top: 7vh;
+    left: 6vw;
+    right: 6vw;
+    bottom: 7vh;
+    border-radius: 14px;
+    border: 2px solid var(--tile-edge);
+    background: linear-gradient(180deg, #1b40a8, #10256b);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 26px;
+    padding: 30px;
+    text-align: center;
+    transform-origin: center center;
+    will-change: transform;
+  }
+
+  .clue-inner {
+    opacity: 1;
+    transition: opacity 0.3s ease 0.2s;
+  }
+
+  .clue-box.zooming .clue-inner {
+    opacity: 0;
+    transition: none;
+  }
+
+  .clue-meta {
+    font-size: clamp(0.9rem, 2vw, 1.6rem);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--soft);
+    margin-bottom: 22px;
+  }
+
+  .clue-question {
+    font-size: clamp(1.8rem, 6.5vw, 5.5rem);
+    font-weight: 800;
+    line-height: 1.15;
+    color: var(--ink);
+    text-shadow: 0 5px 0 rgba(0, 0, 0, 0.45);
+  }
+
+  .clue-question .cat-word { color: var(--gold); }
+
+  .clue-title-ban {
+    display: none;
+    width: fit-content;
+    margin: 0 auto 24px;
+    padding: 0.35em 1.1em;
+    border-radius: 14px;
+    border: 3px solid #ffd2d2;
+    background: #c62828;
+    color: #fff;
+    font-size: clamp(1.4rem, 4.2vw, 3.6rem);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    box-shadow: 0 8px 30px rgba(198, 40, 40, 0.55);
+  }
+
+  .clue-title-ban.show {
+    display: block;
+    animation: title-ban-pulse 0.9s ease-in-out 3;
+  }
+
+  @keyframes title-ban-pulse {
+    50% { transform: scale(1.08); }
+  }
+
+  .timed-answer {
+    --answer-scale: 1;
+    display: none;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: calc(10px * var(--answer-scale));
+    margin-top: 22px;
+  }
+
+  .timed-answer.show { display: flex; }
+
+  .timed-answer .answer-word {
+    padding: calc(7px * var(--answer-scale)) calc(15px * var(--answer-scale));
+    border-radius: calc(10px * var(--answer-scale));
+    border: 1px solid rgba(247, 201, 72, 0.5);
+    background: rgba(247, 201, 72, 0.12);
+    color: var(--gold);
+    font-size: calc(clamp(1rem, 3.2vw, 2.6rem) * var(--answer-scale));
+    font-weight: 800;
+    line-height: 1.15;
+    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease,
+      text-shadow 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  /* The word the host is playing right now. */
+  .timed-answer .answer-word.playing {
+    color: #fff8dd;
+    background: rgba(247, 201, 72, 0.28);
+    border-color: var(--gold);
+    text-shadow: 0 0 30px rgba(247, 201, 72, 0.95);
+    box-shadow: 0 0 34px rgba(247, 201, 72, 0.5);
+  }
+
+  /* ---------- answer screen ----------
+     The tile is won but not finished: the answers are out, the song title and
+     the artist are blanks that give nothing away. */
+
+  .reveal-box {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-top: 22px;
+  }
+
+  .reveal-box.show { display: flex; }
+
+  .reveal-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+  }
+
+  .reveal-label {
+    font-size: clamp(0.7rem, 1.5vw, 1.05rem);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--soft);
+  }
+
+  .reveal-value {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: clamp(1.1rem, 3vw, 2.2rem);
+    font-weight: 400;
+    letter-spacing: 0.2em;
+    padding: 0 0.3em;
+    color: var(--ink);
+  }
+
+  .reveal-value.got {
+    font-family: inherit;
+    font-weight: 800;
+    letter-spacing: normal;
+    color: #7ee0a8;
+  }
+
+  .reveal-by {
+    font-size: clamp(0.7rem, 1.5vw, 1.05rem);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #7ee0a8;
+  }
+
+  .clue-box.answered { border-color: #6ce6a8; }
+
+  .clue-points {
+    margin-top: 26px;
+    font-size: clamp(1.6rem, 4vw, 3rem);
+    font-weight: 800;
+    color: var(--gold);
+  }
+
+  .clue-box.free {
+    background: linear-gradient(180deg, #1fa060, #0e6438);
+    border-color: #6ce6a8;
+  }
+
+  .clue-free {
+    display: none;
+    font-size: clamp(1.1rem, 3vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #eafff3;
+    margin-bottom: 18px;
+  }
+
+  .clue-box.free .clue-free { display: block; }
+  .clue-box.free .clue-question .cat-word { color: #d6ffe8; }
+  .clue-box.free .clue-points { color: #eafff3; }
+
+  .clue-box.trivia {
+    background: linear-gradient(180deg, #ffffff, #dfe6f7);
+    border-color: #fff;
+  }
+  .clue-box.trivia .clue-meta { color: #33437a; font-weight: 800; }
+  .clue-box.trivia .clue-question {
+    color: #10256b;
+    text-shadow: none;
+    font-size: clamp(1.6rem, 4.6vw, 4rem);
+  }
+  .clue-box.trivia .clue-points { color: #10256b; }
+  .clue-box.trivia .timed-answer .answer-word {
+    color: #10256b;
+    background: rgba(16, 37, 107, 0.08);
+    border-color: rgba(16, 37, 107, 0.35);
+  }
+
+  .clue-timer {
+    margin: 30px auto 0;
+    width: min(560px, 70vw);
+    opacity: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: opacity 0.25s ease;
+  }
+
+  .clue-timer.on { opacity: 1; }
+
+  .timer-line.hidden { display: none; }
+
+  .clue-timer .bar {
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+  }
+
+  .clue-timer .fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #7ee0a8, var(--gold));
+    border-radius: 999px;
+  }
+
+  .clue-timer .secs {
+    margin-top: 8px;
+    font-size: clamp(0.9rem, 2vw, 1.4rem);
+    letter-spacing: 0.14em;
+    color: var(--soft);
+  }
+
+  .timer-line.paused .fill { background: #6d7ba6; }
+
+  /* Nothing left to count - the line is only carrying its label now. */
+  .timer-line.over .bar { display: none; }
+  .timer-line.over .secs { margin-top: 0; }
+
+  /* The guessing clock is deliberately a different colour to the clip clock. */
+  .timer-line.guess .fill { background: linear-gradient(90deg, #ffd08a, #ff6b4a); }
+  .timer-line.guess .secs { color: #ffbb8f; }
+  .timer-line.guess.done .fill { background: #7a2f22; }
+
+  /* Browsers refuse to start audio until somebody taps once. */
+  .sound-gate {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    z-index: 60;
+    padding: 14px 26px;
+    border-radius: 999px;
+    border: 1px solid var(--gold);
+    background: rgba(247, 201, 72, 0.92);
+    color: #1a1400;
+    font: inherit;
+    font-weight: 700;
+    font-size: 1.05rem;
+    cursor: pointer;
+  }
+
+  .sound-gate.hidden { display: none; }
+
+  /* ---------- example round ----------
+     Sits over the real board but under the clue overlay, so the example tile
+     opens, counts down and zooms exactly like a real one. */
+
+  .demo-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(18px, 4vh, 44px);
+    background: radial-gradient(circle at 50% 35%, #16327a, #050b26 72%);
+  }
+
+  .demo-layer.show { display: flex; }
+
+  .demo-mark {
+    font-size: clamp(0.7rem, 1.5vw, 1.05rem);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold);
+    opacity: 0.75;
+  }
+
+  .demo-scores { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+  .demo-layer .tile {
+    width: clamp(150px, 20vw, 300px);
+    height: clamp(110px, 16vh, 210px);
+    flex: none;
+  }
+
+  .demo-column {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: clamp(150px, 20vw, 300px);
+  }
+</style>
+</head>
+<body>
+  <div class="top">
+    <h1 id="title">Musikk Quiz</h1>
+    <button class="ghost-btn" id="fullscreenBtn" type="button">Fullscreen</button>
+  </div>
+
+  <div class="scoreboard" id="scoreboard"></div>
+
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="waiting show" id="waiting">
+    <h2>Musikk Quiz</h2>
+    <p id="waitingText">Waiting for the host to start the game&hellip;</p>
+    <button type="button" id="openConsoleBtn" class="hide">Open the host console</button>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="clue-box" id="clueBox">
+      <div class="clue-inner">
+        <div class="clue-free" id="clueFree">Everyone can guess</div>
+        <div class="clue-meta" id="clueMeta"></div>
+        <div class="clue-title-ban" id="clueTitleBan">Title not allowed</div>
+        <div class="clue-question" id="clueQuestion"></div>
+        <div class="timed-answer" id="timedAnswer"></div>
+        <div class="reveal-box" id="revealBox">
+          <div class="reveal-row">
+            <span class="reveal-label">Song</span>
+            <span class="reveal-value" id="revealSong"></span>
+            <span class="reveal-by" id="revealSongBy"></span>
+          </div>
+          <div class="reveal-row">
+            <span class="reveal-label">Artist</span>
+            <span class="reveal-value" id="revealArtist"></span>
+            <span class="reveal-by" id="revealArtistBy"></span>
+          </div>
+        </div>
+        <div class="clue-points" id="cluePoints"></div>
+        <div class="clue-timer" id="clueTimer">
+          <div class="timer-line" id="songLine">
+            <div class="bar"><div class="fill" id="timerFill"></div></div>
+            <div class="secs" id="timerSecs"></div>
+          </div>
+          <div class="timer-line guess hidden" id="guessLine">
+            <div class="bar"><div class="fill" id="guessFill"></div></div>
+            <div class="secs" id="guessSecs"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-layer" id="demoLayer">
+    <div class="demo-mark">Example</div>
+    <div class="demo-scores" id="demoScores"></div>
+    <div class="demo-column">
+      <div class="cat" id="demoCat"></div>
+      <div class="tile" id="demoTile"></div>
+    </div>
+  </div>
+
+  <button type="button" class="sound-gate hidden" id="soundGate">Tap for sound</button>
+
+  <audio id="player" preload="auto"></audio>
+
+  <script src="quiz-core.js"></script>
+  <script>
+    const boardEl = document.getElementById('board');
+    const scoreboardEl = document.getElementById('scoreboard');
+    const waitingEl = document.getElementById('waiting');
+    const overlayEl = document.getElementById('overlay');
+    const clueBoxEl = document.getElementById('clueBox');
+    const clueMetaEl = document.getElementById('clueMeta');
+    const clueTitleBanEl = document.getElementById('clueTitleBan');
+    const clueQuestionEl = document.getElementById('clueQuestion');
+    const timedAnswerEl = document.getElementById('timedAnswer');
+    const revealBoxEl = document.getElementById('revealBox');
+    const revealSongEl = document.getElementById('revealSong');
+    const revealSongByEl = document.getElementById('revealSongBy');
+    const revealArtistEl = document.getElementById('revealArtist');
+    const revealArtistByEl = document.getElementById('revealArtistBy');
+    const cluePointsEl = document.getElementById('cluePoints');
+    const clueTimerEl = document.getElementById('clueTimer');
+    const songLineEl = document.getElementById('songLine');
+    const timerFillEl = document.getElementById('timerFill');
+    const timerSecsEl = document.getElementById('timerSecs');
+    const guessLineEl = document.getElementById('guessLine');
+    const guessFillEl = document.getElementById('guessFill');
+    const guessSecsEl = document.getElementById('guessSecs');
+    const waitingTextEl = document.getElementById('waitingText');
+    const openConsoleBtn = document.getElementById('openConsoleBtn');
+    const player = document.getElementById('player');
+    const volumeLeveler = quizCreateVolumeLeveler(player);
+    const soundGate = document.getElementById('soundGate');
+    const demoLayer = document.getElementById('demoLayer');
+    const demoTileEl = document.getElementById('demoTile');
+    const demoCatEl = document.getElementById('demoCat');
+    const demoScoresEl = document.getElementById('demoScores');
+
+    document.getElementById('title').textContent = QUIZ_TITLE;
+    document.title = QUIZ_TITLE + ' - Board';
+
+    const tileEls = {};
+    let teamEls = {};
+    let renderedTeamIds = '';
+    let openKey = null;
+    let lastScores = {};
+    let closeTimer = null;
+    let currentState = quizDefaultState();
+
+    function buildBoard() {
+      boardEl.innerHTML = '';
+      Object.keys(tileEls).forEach(function (key) { delete tileEls[key]; });
+      boardEl.style.setProperty('--rows', QUIZ_ROWS);
+      boardEl.style.gridTemplateColumns = 'repeat(' + QUIZ_CATEGORIES.length + ', minmax(0, 1fr))';
+
+      QUIZ_CATEGORIES.forEach(function (cat) {
+        const head = document.createElement('div');
+        head.className = 'cat';
+        head.textContent = cat.name;
+        boardEl.appendChild(head);
+      });
+
+      for (let row = 0; row < QUIZ_ROWS; row++) {
+        for (let cat = 0; cat < QUIZ_CATEGORIES.length; cat++) {
+          const tile = document.createElement('div');
+          const clue = quizClue(cat, row);
+          tile.className = clue ? 'tile' : 'tile empty';
+          tile.textContent = clue ? String(quizPoints(row)) : '';
+          boardEl.appendChild(tile);
+          tileEls[quizTileKey(cat, row)] = tile;
+        }
+      }
+    }
+
+    function paintTiles(state) {
+      const teamCount = (state.teams || []).length || 1;
+
+      for (let row = 0; row < QUIZ_ROWS; row++) {
+        for (let cat = 0; cat < QUIZ_CATEGORIES.length; cat++) {
+          const key = quizTileKey(cat, row);
+          const el = tileEls[key];
+          if (!el || !quizClue(cat, row)) continue;
+
+          const tile = quizTile(state, cat, row);
+          const free = quizIsOpenToAll(state, cat, row);
+          const missed = !!tile.done && !tile.awardedTo;
+
+          el.classList.toggle('done', !!tile.done && !missed);
+          el.classList.toggle('missed', missed);
+          el.classList.toggle('free', free);
+          el.classList.toggle('wrong', !tile.done && !free && tile.wrong > 0);
+
+          if (!tile.done && !free && tile.wrong > 0) {
+            // Light red on the first miss, darkening evenly until every team has missed.
+            const light = 50 - (tile.wrong / teamCount) * 24;
+            el.style.setProperty('--wrong-top', 'hsl(0, 55%, ' + light + '%)');
+            el.style.setProperty('--wrong-bottom', 'hsl(0, 58%, ' + (light - 12) + '%)');
+          } else {
+            el.style.removeProperty('--wrong-top');
+            el.style.removeProperty('--wrong-bottom');
+          }
+        }
+      }
+    }
+
+    function paintScoreboard(state) {
+      const teams = state.teams || [];
+      const ids = teams.map(function (t) { return t.id; }).join('|');
+      if (ids !== renderedTeamIds) {
+        scoreboardEl.innerHTML = '';
+        teamEls = {};
+        teams.forEach(function (team) {
+          const card = document.createElement('div');
+          card.className = 'team';
+          const name = document.createElement('div');
+          name.className = 'team-name';
+          const score = document.createElement('div');
+          score.className = 'team-score';
+          card.appendChild(name);
+          card.appendChild(score);
+          scoreboardEl.appendChild(card);
+          teamEls[team.id] = { card: card, name: name, score: score };
+        });
+        renderedTeamIds = ids;
+        lastScores = {};
+      }
+
+      const teamIds = teams.map(function (t) { return t.id; });
+      const up = teamIds.indexOf(state.turn) !== -1 ? state.turn : teamIds[0];
+      teams.forEach(function (team) {
+        const els = teamEls[team.id];
+        if (!els) return;
+        els.name.textContent = team.name || 'Team';
+        els.score.textContent = String(team.score);
+        els.card.classList.toggle('up', !!state.started && team.id === up);
+        if (lastScores[team.id] !== undefined && lastScores[team.id] !== team.score) {
+          els.card.classList.add('pulse');
+          setTimeout(function () { els.card.classList.remove('pulse'); }, 700);
+        }
+        lastScores[team.id] = team.score;
+      });
+    }
+
+    function openClue(catIndex, rowIndex, animate) {
+      const key = quizTileKey(catIndex, rowIndex);
+      const category = QUIZ_CATEGORIES[catIndex];
+      if (!category) return;
+      const clue = quizClue(catIndex, rowIndex);
+
+      openKey = key;
+      clearTimeout(closeTimer);
+
+      clueMetaEl.textContent = '';
+      clueTitleBanEl.classList.toggle('show', !!(clue && clue.blocked && clue.blocked.length));
+      clueQuestionEl.innerHTML = 'What is the <span class="cat-word"></span>?';
+      clueQuestionEl.querySelector('.cat-word').textContent = category.name;
+      updateTimedAnswers(catIndex, rowIndex);
+      cluePointsEl.textContent = quizPoints(rowIndex) + (quizPoints(rowIndex) === 1 ? ' point' : ' points');
+
+      overlayEl.classList.add('active');
+      clueBoxEl.style.transition = 'none';
+      clueBoxEl.style.transform = 'none';
+      zoomClueFrom(tileEls[key], animate);
+    }
+
+    /* Grows the clue box out of the tile it belongs to. */
+    function zoomClueFrom(tile, animate) {
+      const to = clueBoxEl.getBoundingClientRect();
+
+      if (animate && tile) {
+        const from = tile.getBoundingClientRect();
+        const dx = (from.left + from.width / 2) - (to.left + to.width / 2);
+        const dy = (from.top + from.height / 2) - (to.top + to.height / 2);
+        const sx = from.width / to.width;
+        const sy = from.height / to.height;
+
+        clueBoxEl.classList.add('zooming');
+        clueBoxEl.style.transform = 'translate(' + dx + 'px, ' + dy + 'px) scale(' + sx + ', ' + sy + ')';
+        tile.classList.add('hidden-for-zoom');
+        void clueBoxEl.offsetWidth;
+
+        clueBoxEl.style.transition = 'transform 0.55s cubic-bezier(0.2, 0.85, 0.25, 1)';
+        clueBoxEl.style.transform = 'none';
+        setTimeout(function () {
+          overlayEl.classList.add('lit');
+          clueBoxEl.classList.remove('zooming');
+        }, 20);
+      } else {
+        clueBoxEl.classList.remove('zooming');
+        overlayEl.classList.add('lit');
+        if (tile) tile.classList.add('hidden-for-zoom');
+      }
+    }
+
+    /* The parser separates accepted answers with , or / - each one is drawn on
+       its own so the word the host is playing can be lit up. */
+    function answerParts(clue) {
+      const timed = (clue && clue.timedAnswers) || [];
+      const parts = [];
+      String((clue && clue.answer) || '').split(/[,/]/).forEach(function (raw) {
+        const label = raw.trim();
+        if (!label) return;
+        parts.push({
+          label: label,
+          index: timed.findIndex(function (answer) { return answer.text === label; })
+        });
+      });
+      return parts;
+    }
+
+    function paintAnswerWords(parts, isVisible) {
+      const playing = currentState.answerPlaying;
+      timedAnswerEl.innerHTML = '';
+      let shown = 0;
+      parts.forEach(function (part) {
+        if (!isVisible(part)) return;
+        const word = document.createElement('span');
+        word.className = 'answer-word';
+        if (part.index !== -1 && part.index === playing) word.classList.add('playing');
+        word.textContent = part.label;
+        timedAnswerEl.appendChild(word);
+        shown++;
+      });
+      // Songs like Dai Dai name a dozen answers - they shrink to stay on screen.
+      const scale = shown > 12 ? 0.45 : shown > 8 ? 0.58 : shown > 4 ? 0.75 : 1;
+      timedAnswerEl.style.setProperty('--answer-scale', String(scale));
+      timedAnswerEl.classList.toggle('show', shown > 0);
+    }
+
+    function updateTimedAnswers(catIndex, rowIndex) {
+      const clue = quizClue(catIndex, rowIndex);
+      if (!clue) return;
+
+      const answerScreen = quizRevealOpen(currentState, catIndex, rowIndex);
+      const persisted = quizTile(currentState, catIndex, rowIndex).revealedAnswers || {};
+      paintAnswerWords(answerParts(clue), function (part) {
+        return answerScreen || (part.index !== -1 && persisted[String(part.index)]);
+      });
+      paintRevealBox(clue, answerScreen);
+    }
+
+    /* Won the category, not the song: the title and the artist stay as dashes
+       until a team is given the point for naming them. */
+    function paintRevealBox(clue, on) {
+      revealBoxEl.classList.toggle('show', !!on);
+      clueBoxEl.classList.toggle('answered', !!on);
+      if (!on) return;
+      const reveal = quizReveal(currentState);
+      const songBefore = reveal && !reveal.songTo
+        ? quizNamedEarlier(currentState, clue, 'song', reveal.cat, reveal.row) : null;
+      const artistBefore = reveal && !reveal.artistTo
+        ? quizNamedEarlier(currentState, clue, 'artist', reveal.cat, reveal.row) : null;
+      paintRevealLine(revealSongEl, revealSongByEl, clue.song,
+        teamNameById(songBefore ? songBefore.team : reveal && reveal.songTo), !!songBefore);
+      paintRevealLine(revealArtistEl, revealArtistByEl, clue.artist,
+        teamNameById(artistBefore ? artistBefore.team : reveal && reveal.artistTo), !!artistBefore);
+    }
+
+    function teamNameById(teamId) {
+      const team = teamId
+        ? (currentState.teams || []).find(function (t) { return t.id === teamId; })
+        : null;
+      return team ? team.name : '';
+    }
+
+    function paintRevealLine(valueEl, byEl, text, teamName, earlier) {
+      valueEl.textContent = teamName ? text : quizMaskText(text);
+      valueEl.classList.toggle('got', !!teamName);
+      byEl.textContent = teamName ? teamName + (earlier ? ' \u00B7 earlier' : '') : '';
+    }
+
+    /* Whoever is playing the song marks the words it has passed. The countdown
+       is not used for this: the clip can be extended, replayed or left running
+       after the tile is awarded, and the words must keep appearing. */
+    function revealFromBoardAudio() {
+      const state = currentState;
+      if (!state || !state.audio || state.audio.where !== 'board') return;
+      if (!state.started || quizDemoActive(state)) return;
+
+      const at = player.currentTime;
+      const sel = state.selected;
+      const bonusIndex = sel ? null : quizBonusOpen(state);
+      const clue = sel ? quizClue(sel.cat, sel.row) : (bonusIndex === null ? null : QUIZ_BONUS[bonusIndex]);
+      const scheduled = (clue && clue.timedAnswers) || [];
+      if (!scheduled.length) return;
+
+      let changed = false;
+      if (sel) {
+        const key = quizTileKey(sel.cat, sel.row);
+        const tile = quizTile(state, sel.cat, sel.row);
+        if (!state.tiles[key]) state.tiles[key] = tile;
+        if (!state.tiles[key].revealedAnswers) state.tiles[key].revealedAnswers = {};
+        const revealed = state.tiles[key].revealedAnswers;
+        scheduled.forEach(function (answer, index) {
+          if (at < answer.after || revealed[String(index)]) return;
+          revealed[String(index)] = true;
+          changed = true;
+        });
+        if (changed) updateTimedAnswers(sel.cat, sel.row);
+      } else {
+        if (!state.bonus.revealedAnswers) state.bonus.revealedAnswers = {};
+        const revealed = state.bonus.revealedAnswers;
+        scheduled.forEach(function (answer, index) {
+          const mark = bonusIndex + ':' + index;
+          if (at < answer.after || revealed[mark]) return;
+          revealed[mark] = true;
+          changed = true;
+        });
+        if (changed) updateBonusAnswers(bonusIndex, state);
+      }
+      if (changed) QuizSync.write(state);
+    }
+
+    player.addEventListener('timeupdate', revealFromBoardAudio);
+
+    /* The bonus round plays a whole song with no countdown, so an answer word
+       only appears once the host has played its moment - or all of them at once
+       when the host shows the answer (bonus.shown). */
+    function updateBonusAnswers(index, state) {
+      const item = QUIZ_BONUS[index];
+      const revealed = (state.bonus && state.bonus.revealedAnswers) || {};
+      const all = !!state.bonus && state.bonus.shown === index;
+      paintAnswerWords(answerParts(item), function (part) {
+        return all || (part.index !== -1 && revealed[index + ':' + part.index]);
+      });
+      paintRevealBox(null, false);
+    }
+
+    /* The bonus round has no tile to zoom out of, so it just fades in. */
+    function openBonus(index, state) {
+      const item = QUIZ_BONUS[index];
+      if (!item) return;
+
+      openKey = quizBonusKey(index);
+      clearTimeout(closeTimer);
+
+      clueMetaEl.textContent = 'Bonus round';
+      clueTitleBanEl.classList.toggle('show', !!(item.blocked && item.blocked.length));
+      if (item.category) {
+        clueQuestionEl.innerHTML = 'What is the <span class="cat-word"></span>?';
+        clueQuestionEl.querySelector('.cat-word').textContent = item.category;
+      } else {
+        clueQuestionEl.textContent = 'Bonus song ' + (index + 1);
+      }
+      updateBonusAnswers(index, state);
+      cluePointsEl.textContent = bonusPointsLabel(state);
+
+      overlayEl.classList.add('active');
+      clueBoxEl.classList.remove('zooming', 'free');
+      clueBoxEl.style.transition = 'none';
+      clueBoxEl.style.transform = 'none';
+      overlayEl.classList.add('lit');
+    }
+
+    function bonusPointsLabel(state) {
+      const points = quizBonusPoints(state);
+      return points + (points === 1 ? ' point' : ' points');
+    }
+
+    /* Trivia takes over the tile that is already open: the box turns white,
+       teases first, then shows the question, then the answer once settled. */
+    function openTrivia(open, animate) {
+      const key = quizTileKey(open.cat, open.row);
+      openKey = key;
+      clearTimeout(closeTimer);
+      paintTrivia(open);
+      overlayEl.classList.add('active');
+      clueBoxEl.style.transition = 'none';
+      clueBoxEl.style.transform = 'none';
+      zoomClueFrom(tileEls[key], animate);
+    }
+
+    function paintTrivia(open) {
+      const clue = quizClue(open.cat, open.row);
+      if (!clue || !clue.trivia) return;
+      const result = quizTile(currentState, open.cat, open.row).trivia;
+      paintTriviaBox(clue.trivia, open.shown,
+        result && !result.skipped ? { winner: teamNameById(result.awardedTo) } : null);
+    }
+
+    // result: null until settled, then { winner } with '' for nobody.
+    function paintTriviaBox(trivia, shown, result) {
+      clueBoxEl.classList.remove('free');
+      clueBoxEl.classList.add('trivia');
+      clueTitleBanEl.classList.remove('show');
+      paintRevealBox(null, false);
+      clueMetaEl.textContent = shown ? 'Bonus trivia question \u00B7 Free for all' : 'Free for all';
+      clueQuestionEl.textContent = shown ? trivia.question : 'Bonus trivia question';
+
+      timedAnswerEl.innerHTML = '';
+      timedAnswerEl.style.setProperty('--answer-scale', '1');
+      if (result) {
+        const word = document.createElement('span');
+        word.className = 'answer-word';
+        word.textContent = trivia.answer;
+        timedAnswerEl.appendChild(word);
+        cluePointsEl.textContent = result.winner ? '+' + QUIZ_TRIVIA_POINTS + ' to ' + result.winner : 'Nobody got it';
+      } else {
+        cluePointsEl.textContent = QUIZ_TRIVIA_POINTS + ' points';
+      }
+      timedAnswerEl.classList.toggle('show', !!result);
+    }
+
+    function closeClue(animate) {
+      if (!openKey) return;
+      const key = openKey;
+      const tile = key === QUIZ_DEMO_KEY ? demoTileEl : tileEls[key];
+      openKey = null;
+
+      function finish() {
+        overlayEl.classList.remove('active', 'lit');
+        clueBoxEl.style.transition = 'none';
+        clueBoxEl.style.transform = 'none';
+        clueBoxEl.classList.remove('zooming');
+        if (tile) tile.classList.remove('hidden-for-zoom');
+      }
+
+      paintRevealBox(null, false);
+
+      if (animate && tile) {
+        const to = clueBoxEl.getBoundingClientRect();
+        const from = tile.getBoundingClientRect();
+        const dx = (from.left + from.width / 2) - (to.left + to.width / 2);
+        const dy = (from.top + from.height / 2) - (to.top + to.height / 2);
+        const sx = from.width / to.width;
+        const sy = from.height / to.height;
+
+        clueBoxEl.classList.add('zooming');
+        clueBoxEl.style.transition = 'transform 0.45s cubic-bezier(0.4, 0, 0.6, 1)';
+        clueBoxEl.style.transform = 'translate(' + dx + 'px, ' + dy + 'px) scale(' + sx + ', ' + sy + ')';
+        overlayEl.classList.remove('lit');
+        closeTimer = setTimeout(finish, 460);
+      } else {
+        finish();
+      }
+    }
+
+    /* The host can point the game at a different clue list mid-session. */
+    let appliedList = null;
+    let preloadedAudioList = null;
+
+    function syncList(state) {
+      const signature = state.list ? JSON.stringify(state.list) : '';
+      if (signature === appliedList) return;
+      appliedList = signature;
+      quizApplyList(state.list || null);
+      document.getElementById('title').textContent = QUIZ_TITLE;
+      document.title = QUIZ_TITLE + ' - Board';
+      if (openKey) closeClue(false);
+      buildBoard();
+    }
+
+    function preloadBoardAudio(state) {
+      if (!state.audio || state.audio.where !== 'board' || state.audio.normalize === false) return;
+      const signature = appliedList || '__default__';
+      if (signature === preloadedAudioList) return;
+      preloadedAudioList = signature;
+      const sources = [];
+      QUIZ_CATEGORIES.forEach(function (category, cat) {
+        category.clues.forEach(function (clue, row) {
+          sources.push({ source: quizAudioSrc(cat, row), startAt: quizAudioStart(cat, row), duration: quizSeconds(row) });
+        });
+      });
+      QUIZ_BONUS.forEach(function (clue, index) {
+        sources.push({ source: quizBonusAudioSrc(index), startAt: quizBonusAudioStart(index), duration: 0 });
+      });
+      volumeLeveler.preload(sources.filter(function (spec) { return Boolean(spec.source); }));
+    }
+
+    /* The host decides whether the songs come out of the console or out of
+       here; when it is here, this mirrors its play, pause and seek. */
+    let audioToken = -1;
+     let audioNormalize = true;
+
+    function clearAudio() {
+      if (player.getAttribute('src')) {
+        player.pause();
+        player.removeAttribute('src');
+        player.load();
+      }
+      soundGate.classList.add('hidden');
+    }
+
+    function syncAudio(state) {
+      const audio = state.audio;
+      if (!audio || audio.where !== 'board' || !audio.src) {
+        audioToken = audio ? audio.token : -1;
+        clearAudio();
+        return;
+      }
+
+      const normalize = audio.normalize !== false;
+      if (normalize !== audioNormalize) {
+        audioNormalize = normalize;
+        volumeLeveler.setEnabled(normalize);
+        if (normalize) volumeLeveler.prepare(audio.src, audio.start, audio.duration);
+      }
+
+      if (audio.token !== audioToken) {
+        audioToken = audio.token;
+        const start = audio.start || 0;
+        volumeLeveler.prepare(audio.src, start, audio.duration);
+        if (player.getAttribute('src') !== audio.src) {
+          player.src = audio.src;
+          player.addEventListener('loadedmetadata', function once() {
+            try { player.currentTime = start; } catch (err) { /* seek not ready */ }
+          }, { once: true });
+        } else {
+          try { player.currentTime = start; } catch (err) { /* not seekable yet */ }
+        }
+      }
+
+      if (audio.playing && player.paused) {
+        player.play().then(function () {
+          soundGate.classList.add('hidden');
+        }).catch(function () {
+          soundGate.classList.remove('hidden');
+        });
+      } else if (!audio.playing && !player.paused) {
+        player.pause();
+      }
+    }
+
+    soundGate.addEventListener('click', function () {
+      player.play().then(function () {
+        soundGate.classList.add('hidden');
+      }).catch(function () { /* still blocked; leave the button up */ });
+    });
+
+    /* ---------- example round ----------
+       A throwaway tile that behaves like a real one. Everything it shows
+       comes out of state.demo, so the board behind it stays untouched. */
+
+    function paintDemo(state) {
+      const active = quizDemoActive(state);
+      demoLayer.classList.toggle('show', active);
+      if (!active) return;
+
+      const tile = quizDemoTile(state);
+      const free = quizDemoIsOpenToAll(state);
+      const missed = !!tile.done && tile.awardedTo === null;
+
+      demoCatEl.textContent = QUIZ_DEMO_CLUE.category;
+      demoTileEl.textContent = String(QUIZ_DEMO_CLUE.points);
+      demoTileEl.classList.toggle('done', !!tile.done && !missed);
+      demoTileEl.classList.toggle('missed', missed);
+      demoTileEl.classList.toggle('free', free);
+      demoTileEl.classList.toggle('wrong', !tile.done && !free && tile.wrong > 0);
+
+      demoScoresEl.innerHTML = '';
+      quizDemoTeams(state).forEach(function (team) {
+        const card = document.createElement('div');
+        card.className = 'team';
+        const name = document.createElement('div');
+        name.className = 'team-name';
+        name.textContent = team.name;
+        const score = document.createElement('div');
+        score.className = 'team-score';
+        score.textContent = String(team.score);
+        card.appendChild(name);
+        card.appendChild(score);
+        demoScoresEl.appendChild(card);
+      });
+    }
+
+    function openDemoClue(animate) {
+      openKey = QUIZ_DEMO_KEY;
+      clearTimeout(closeTimer);
+
+      clueMetaEl.textContent = QUIZ_DEMO_CLUE.category;
+      clueTitleBanEl.classList.remove('show');
+      clueQuestionEl.innerHTML = 'What is the &ldquo;<span class="cat-word"></span>&rdquo;?';
+      clueQuestionEl.querySelector('.cat-word').textContent = QUIZ_DEMO_CLUE.category;
+      cluePointsEl.textContent = QUIZ_DEMO_CLUE.points + (QUIZ_DEMO_CLUE.points === 1 ? ' point' : ' points');
+      updateDemoTimedAnswers(currentState);
+
+      overlayEl.classList.add('active');
+      clueBoxEl.style.transition = 'none';
+      clueBoxEl.style.transform = 'none';
+      zoomClueFrom(demoTileEl, animate);
+    }
+
+    /* Keeps the revealed word up after the countdown stops. Once a pretend team
+       wins, the full answer and the masked title and artist come up, like the real board. */
+    function updateDemoTimedAnswers(state) {
+      const demoTrivia = quizDemoTrivia(state);
+      if (demoTrivia) {
+        const result = demoTrivia.result;
+        paintTriviaBox(QUIZ_DEMO_CLUE.trivia, demoTrivia.shown, result
+          ? { winner: result.team !== null ? quizDemoTeams(state)[result.team].name : '' }
+          : null);
+        return;
+      }
+      const demoReveal = quizDemoReveal(state);
+      if (demoReveal) {
+        const names = quizDemoTeams(state).map(function (t) { return t.name; });
+        timedAnswerEl.textContent = QUIZ_DEMO_CLUE.timedAnswers.map(function (a) { return a.text; }).join(' / ');
+        timedAnswerEl.classList.add('show');
+        revealBoxEl.classList.add('show');
+        clueBoxEl.classList.add('answered');
+        paintRevealLine(revealSongEl, revealSongByEl, QUIZ_DEMO_CLUE.song,
+          demoReveal.songTo !== null ? names[demoReveal.songTo] : '', false);
+        paintRevealLine(revealArtistEl, revealArtistByEl, QUIZ_DEMO_CLUE.artist,
+          demoReveal.artistTo !== null ? names[demoReveal.artistTo] : '', false);
+        return;
+      }
+      const timer = state.timer;
+      const remaining = timer
+        ? (timer.running ? Math.max(0, (timer.endsAt - Date.now()) / 1000) : Math.max(0, timer.remaining))
+        : 0;
+      const reveal = quizDemoRevealed(state, timer ? timer.duration - remaining : 0);
+      if (reveal.changed) QuizSync.write(state);
+      timedAnswerEl.textContent = reveal.texts.join(' / ');
+      timedAnswerEl.classList.toggle('show', reveal.texts.length > 0);
+      paintRevealBox(null, false);
+    }
+
+    function render(state) {
+      currentState = state;
+      syncList(state);
+      preloadBoardAudio(state);
+      syncAudio(state);
+      paintDemo(state);
+      waitingEl.classList.toggle('show', !state.started && !quizDemoActive(state));
+      paintScoreboard(state);
+      paintTiles(state);
+
+      const demoOpen = quizDemoOpen(state);
+      const sel = state.started && !quizDemoActive(state) ? state.selected : null;
+      const bonusIndex = state.started && !sel && !quizDemoActive(state) ? quizBonusOpen(state) : null;
+      const trivia = state.started && !sel && bonusIndex === null && !quizDemoActive(state) ? quizTriviaOpen(state) : null;
+      // Same key as the tile itself, so going from answer screen to trivia keeps the box open.
+      const selKey = demoOpen
+        ? QUIZ_DEMO_KEY
+        : (sel ? quizTileKey(sel.cat, sel.row)
+          : (bonusIndex !== null ? quizBonusKey(bonusIndex)
+            : (trivia ? quizTileKey(trivia.cat, trivia.row) : null)));
+
+      if (selKey && selKey !== openKey) {
+        if (openKey) closeClue(false);
+        if (demoOpen) {
+          openDemoClue(true);
+        } else if (sel) {
+          openClue(sel.cat, sel.row, true);
+        } else if (bonusIndex !== null) {
+          openBonus(bonusIndex, state);
+        } else {
+          openTrivia(trivia, true);
+        }
+      } else if (!selKey && openKey) {
+        closeClue(true);
+      }
+      if (!(trivia || quizDemoTrivia(state)) || selKey !== openKey) clueBoxEl.classList.remove('trivia');
+
+      if (demoOpen && selKey === openKey) {
+        clueBoxEl.classList.toggle('free', quizDemoIsOpenToAll(state));
+        updateDemoTimedAnswers(state);
+      } else if (sel && selKey === openKey) {
+        clueBoxEl.classList.toggle('free', !quizRevealOpen(state, sel.cat, sel.row) && quizIsOpenToAll(state, sel.cat, sel.row));
+        updateTimedAnswers(sel.cat, sel.row);
+      } else if (bonusIndex !== null && selKey === openKey) {
+        // The host can change what the bonus song is worth while it plays.
+        cluePointsEl.textContent = bonusPointsLabel(state);
+        updateBonusAnswers(bonusIndex, state);
+      } else if (trivia && selKey === openKey) {
+        paintTrivia(trivia);
+      }
+    }
+
+    document.getElementById('fullscreenBtn').addEventListener('click', function () {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        document.documentElement.requestFullscreen();
+      }
+    });
+
+    function openConsoleWindow() {
+      return QuizSync.setPartner(window.open('Musikk quiz host console.html', 'spotifyQuizConsole'));
+    }
+
+    openConsoleBtn.addEventListener('click', function () {
+      openConsoleWindow();
+    });
+
+    /* The countdowns are driven locally from the host's start timestamps so
+       the bars stay smooth instead of stepping with each synced update. */
+    function tickTimer() {
+      const timer = currentState.timer;
+      const guess = quizGuessTimer(currentState);
+      const demoReveal = quizDemoReveal(currentState);
+      const head = quizHeadTimer(currentState) || (demoReveal && demoReveal.head);
+      const songLive = !!timer && (timer.running || timer.remaining > 0);
+
+      if (!openKey || (!songLive && !guess && !head)) {
+        clueTimerEl.classList.remove('on');
+        return;
+      }
+
+      const selected = currentState.selected;
+      if (quizDemoOpen(currentState)) {
+        updateDemoTimedAnswers(currentState);
+      } else if (selected) {
+        updateTimedAnswers(selected.cat, selected.row);
+      }
+
+      clueTimerEl.classList.add('on');
+
+      songLineEl.classList.toggle('hidden', !timer);
+      if (timer) {
+        const remaining = quizTimerLeft(timer);
+        songLineEl.classList.toggle('paused', !timer.running);
+        timerFillEl.style.width = Math.min(100, (remaining / timer.duration) * 100) + '%';
+        timerSecsEl.textContent = remaining > 0
+          ? 'Song ' + remaining.toFixed(1) + ' sec'
+          : (timer.running ? 'Song 0.0 sec' : 'Song over');
+      }
+
+      // The head start takes the guessing clock's place once the tile is won.
+      const second = head || guess;
+      guessLineEl.classList.toggle('hidden', !second);
+      if (second) {
+        const remaining = quizTimerLeft(second);
+        const spent = !!head && remaining <= 0;
+        guessLineEl.classList.toggle('paused', !second.running && remaining > 0);
+        guessLineEl.classList.toggle('done', remaining <= 0);
+        guessLineEl.classList.toggle('over', spent);
+        guessFillEl.style.width = Math.min(100, (remaining / second.duration) * 100) + '%';
+        guessSecsEl.textContent = head
+          ? (spent ? 'Free for all' : (headStartTeamName() ? headStartTeamName() + ' guess' : 'Head start'))
+          : (remaining > 0 ? 'Answers ' + remaining.toFixed(1) + ' sec' : 'Time is up');
+      }
+    }
+
+    function headStartTeamName() {
+      const demoReveal = quizDemoReveal(currentState);
+      if (demoReveal) return quizDemoTeams(currentState)[demoReveal.team].name;
+      const reveal = quizReveal(currentState);
+      const team = reveal
+        ? (currentState.teams || []).find(function (t) { return t.id === reveal.teamId; })
+        : null;
+      return team ? team.name : '';
+    }
+
+    buildBoard();
+
+    const initial = QuizSync.subscribe(render);
+    if (!initial) render(quizDefaultState());
+
+    QuizSync.announce('board');
+    setInterval(tickTimer, 100);
+
+    function refreshLink() {
+      if (currentState.started || quizDemoActive(currentState)) return;
+      const alone = !QuizSync.partnerLive();
+      openConsoleBtn.classList.toggle('hide', !alone);
+      waitingTextEl.textContent = alone
+        ? 'The host console is not open yet.'
+        : 'Waiting for the host to start the game\u2026';
+    }
+
+    refreshLink();
+    setInterval(refreshLink, 1000);
+  </script>
+</body>
+</html>
